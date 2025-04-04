@@ -1763,6 +1763,51 @@ class Brain:
         self.step = 0
         return avg_test_loss
 
+    def evaluate1(
+        self,
+        test_set,
+        max_key=None,
+        min_key=None,
+        progressbar=None,
+        test_loader_kwargs={},
+    ):
+        if progressbar is None:
+            progressbar = not self.noprogressbar
+
+        # Only show progressbar if requested and main_process
+        enable = progressbar and sb.utils.distributed.if_main_process()
+
+        if not (
+            isinstance(test_set, DataLoader)
+            or isinstance(test_set, LoopedLoader)
+        ):
+            test_loader_kwargs["ckpt_prefix"] = None
+            test_set = self.make_dataloader(
+                test_set, Stage.TEST, **test_loader_kwargs
+            )
+        self.on_evaluate_start(max_key=max_key, min_key=min_key)
+        self.on_stage_start(Stage.TEST, epoch=None)
+        self.modules.eval()
+        with torch.no_grad():
+            for batch in tqdm(
+                test_set,
+                dynamic_ncols=True,
+                disable=not enable,
+                colour=self.tqdm_barcolor["test"],
+            ):
+                print("=======" * 10)
+                # print(batch.noisy_sig[0])
+                # print(batch.noisy_sig[0].shape)
+                # print(self.compute_feats(batch.noisy_sig[0]).shape)
+                # self.compute_feats(batch.noisy_sig[0])
+                print(batch.id)
+                print(self.compute_feats(batch.noisy_sig[0]).shape)
+                print("=======" * 10)
+                # print(batch.noisy_sig[1])
+                # print(batch.noisy_sig[1].shape)
+                # print("=======" * 10)
+                break
+
     def update_average(self, loss, avg_loss):
         """Update running average of the loss.
 
