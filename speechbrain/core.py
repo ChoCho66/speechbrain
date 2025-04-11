@@ -1789,6 +1789,7 @@ class Brain:
         self.on_stage_start(Stage.TEST, epoch=None)
         self.modules.eval()
         with torch.no_grad():
+            print("len(test_set):",len(test_set))
             for batch in tqdm(
                 test_set,
                 dynamic_ncols=True,
@@ -1800,8 +1801,9 @@ class Brain:
                 # print(batch.noisy_sig[0].shape)
                 # print(self.compute_feats(batch.noisy_sig[0]).shape)
                 # self.compute_feats(batch.noisy_sig[0])
-                print(batch.id)
-                print(self.compute_feats(batch.noisy_sig[0]).shape)
+                # print(batch.id)
+                print("batch.noisy_sig[0].shape:",batch.noisy_sig[0].shape)
+                print("self.compute_feats(batch.noisy_sig[0]).shape:",self.compute_feats(batch.noisy_sig[0]).shape)
                 print("=======" * 10)
                 # print(batch.noisy_sig[1])
                 # print(batch.noisy_sig[1].shape)
