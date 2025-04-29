@@ -132,6 +132,7 @@ class TensorboardLogger(TrainLogger):
     def log_stats(
         self,
         stats_meta,
+        epoch=None,
         train_stats=None,
         valid_stats=None,
         test_stats=None,
@@ -140,7 +141,7 @@ class TensorboardLogger(TrainLogger):
         """See TrainLogger.log_stats()"""
         self.global_step["meta"] += 1
         for name, value in stats_meta.items():
-            self.writer.add_scalar(name, value, self.global_step["meta"])
+            self.writer.add_scalar(name, value, epoch or self.global_step["meta"])
 
         for dataset, stats in [
             ("train", train_stats),
