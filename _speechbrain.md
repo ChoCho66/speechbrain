@@ -1,0 +1,83 @@
+
+
+- fit
+  - on_fit_start
+    - init_optimizers
+      - 在這做 optimizer 的初始化以及讀取之前儲存的模型參數
+    - checkpointer
+  - for epoch in epoch_counter:
+    - _fit_train
+      - [on_stage_start(Stage.TRAIN, epoch)]{.blue}
+        - 空
+      - zero_grad
+        - 要改寫
+      - [for batch in train_set]{.red}:
+        - batch's shape: (B, L(B))
+        - loss = [self.fit_batch(batch)]{.red}
+          - [fit_batch]{.red} (在這裡[做 gradient descent]{.red} 並且會 return loss)
+            - on_fit_batch_start
+              - 要自訂
+            - outputs = self.compute_forward
+              - compute_forward 一般由 compute_feats(wavs) 得到
+              - wav, lens = batch
+              - 可直接定義下面
+            - [loss = self.compute_objectives]{.green}(
+                        outputs, batch, sb.Stage.TRAIN
+                    )
+              - 在這裡[做 gradient descent]{.red}
+            - on_fit_batch_end
+              - 要自訂
+          - zero_grad
+            - 要改寫
+      - on_stage_end(Stage.TRAIN, self.avg_train_loss, epoch)
+        - 空，要在這裡用 Tensorboard 紀錄。
+    - _fit_valid
+      - [on_stage_start(Stage.VALID, epoch=None)]{.blue}
+      - for batch in valid_set
+        - loss = [self.evaluate_batch(batch, stage=Stage.VALID)]{.red}
+          - [evaluate_batch(self, batch, stage):]{.red}
+            - out = self.compute_forward(batch, stage=stage)
+            - [loss = self.compute_objectives]{.green}(out, batch, stage=stage)
+              - 在這計算分數，以及生成音檔
+      - [on_stage_end(Stage.VALID, avg_valid_loss, epoch)]{.blue}
+        - 在這儲存 checkpoint
+- evaluate
+  - on_evaluate_start
+    - No epoch
+      - [on_stage_start(Stage.TEST, epoch=None)]{.blue}
+      - for batch in test_set
+        - loss = [self.evaluate_batch(batch, stage=Stage.TEST)]{.red}
+      - [on_stage_end(Stage.TEST, avg_test_loss, None)]{.blue}
+
+---
+
+- train_loader
+
+- train(rank, args, cfg)
+  - generator = SEMamba(cfg).to(device)
+  - discriminator = MetricDiscriminator().to(device)
+  - Load the states of models g and d
+    - state_dict_g, state_dict_do, [steps]{.red}, last_epoch = load_ckpts(args, device)
+  - Load the states of optimizers
+    - optimizers = setup_optimizers((generator, discriminator), cfg)
+    - load_optimizer_states(optimizers, state_dict_do)
+    - optim_g, optim_d = optimizers
+    - scheduler_g, scheduler_d = setup_schedulers(optimizers, cfg, last_epoch)
+  - [for i, batch in enumerate(train_loader)]{.red}
+    - 對於每個 btach, 要做的事情相當於上面的 fit_batch(self, batch)
+    - clean_audio, clean_mag, clean_pha, clean_com, noisy_mag, noisy_pha = batch
+    - mag_g, pha_g, com_g = generator(noisy_mag, noisy_pha)
+    - Discriminator
+      - optim_d.zero_grad()
+      - loss_disc_all.backward()
+        - Use clean_mag, mag_g
+      - optim_d.step()
+    - Generator
+      - optim_g.zero_grad()
+      - loss_gen_all.backward()
+        - Use clean_mag, mag_g, clean_pha, pha_g ...
+      - optim_g.step()
+    - STDOUT logging, Checkpointing and Tensorboard summary logging
+    - steps += 1
+  - scheduler_g.step()
+  - scheduler_d.step()
